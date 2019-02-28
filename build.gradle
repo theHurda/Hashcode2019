@@ -1,0 +1,29 @@
+plugins {
+  id 'java'
+  id 'com.github.johnrengelman.shadow' version '4.0.4'
+}
+
+group 'zz.hashcode2019'
+version '1.0'
+
+sourceCompatibility = 1.8
+
+repositories {
+  mavenCentral()
+}
+
+jar {
+  manifest {
+    attributes 'Main-Class': 'zz.hashcode.HashCode2'
+  }
+}
+
+dependencies {
+  compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.26'
+  compile group: 'ch.qos.logback', name: 'logback-core', version: '1.2.3'
+  compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+
+  compile group: 'com.google.guava', name: 'guava', version: '27.0.1-jre'
+  compile group: 'net.sf.trove4j', name: 'trove4j', version: '3.0.3'
+
+}

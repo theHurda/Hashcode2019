@@ -14,7 +14,7 @@ repositories {
 
 jar {
   manifest {
-    attributes 'Main-Class': 'zz.hashcode.HashCode2'
+    attributes 'Main-Class': 'zz.hashcode.HashCode2019'
   }
 }
 

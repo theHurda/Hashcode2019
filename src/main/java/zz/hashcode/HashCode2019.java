@@ -1,20 +1,14 @@
 package zz.hashcode;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Scanner;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import zz.hashcode.solver.Christofides;
 
-public class HashCode2 {
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class HashCode2019 {
   public static final int RUN_SIZE = 2000;
   public static final int LOOKBACK_DEPTH = 200;
 
@@ -155,14 +149,52 @@ public class HashCode2 {
     int score = 0;
     for (int i = 1; i < s.slides.size(); i++) {
       Slide now = s.slides.get(i);
-      int same = Sets.intersection(last.getTags(), now.getTags()).size();
-      score += Math.min(Math.min(last.getTags().size() - same, now.getTags().size() - same), same);
+      score += getScore(last, now);
       last = now;
     }
     return score;
   }
 
+  private static int getScore(Slide last, Slide now) {
+    int same = Sets.intersection(last.getTags(), now.getTags()).size();
+    return Math.min(Math.min(last.getTags().size() - same, now.getTags().size() - same), same);
+  }
+
   private static Solution solve(List<Slide> input) {
+    return solveGreedy(input);
+  }
+
+  private static Solution solveGreedy(List<Slide> input) {
+    Solution toReturn = new Solution();
+
+    Slide last = input.remove(0);
+    toReturn.slides.add(last);
+
+    while (!input.isEmpty()) {
+      Slide nextBest = null;
+      int bestScore = 0;
+
+      for (Slide slide : input) {
+        if (slide.getTagSize() / 2 < bestScore) {
+          break;
+        }
+        int s = getScore(last, slide);
+        // last slide = smallest tag set that yields that score
+        if (s >= bestScore) {
+          bestScore = s;
+          nextBest = slide;
+        }
+      }
+
+      last = nextBest;
+      toReturn.slides.add(last);
+      input.remove(last);
+    }
+
+    return toReturn;
+  }
+
+  private static Solution solveChristofides(List<Slide> input) {
     Solution toReturn = new Solution();
 
     int co = 0;

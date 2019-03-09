@@ -1,6 +1,9 @@
 package zz.hashcode;
 
 import com.google.common.base.Joiner;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import zz.hashcode.solver.Christofides;
@@ -12,7 +15,12 @@ public class HashCode2019 {
   public static final int RUN_SIZE = 2000;
   public static final int LOOKBACK_DEPTH = 200;
 
-  public static Map<String, Integer> scoreCache = new HashMap<>();
+  public static LoadingCache<String, Integer> scoreCache = CacheBuilder.newBuilder().maximumSize(1000000).build(new CacheLoader<String, Integer>() {
+    @Override
+    public Integer load(String key) throws Exception {
+      return null;
+    }
+  });
 
   public static List<Slide> createSlides(Input input) {
     List<Slide> toReturn = new ArrayList<>(input.images.size());
@@ -137,11 +145,12 @@ public class HashCode2019 {
       input.images.add(new Input.Image(i, "V".equals(orientation), tags));
     }
 
-//    this part needed if assuming pre-created slides
-//    List<Slide> slides = createSlides(input);
-//    Collections.sort(slides, Comparator.comparing(Slide::getTagSize).reversed());
+    List<Slide> slides = createSlides(input);
+    Collections.sort(slides, Comparator.comparing(Slide::getTagSize).reversed());
+    Solution s = solve(slides);
 
-    Solution s = solve(input.images);
+//    Solution s = solve(input.images);
+
     int score = evaluate(s);
     System.err.println("Score: " + score);
     System.out.println(s);
@@ -158,9 +167,13 @@ public class HashCode2019 {
     return score;
   }
 
-  private static Solution solve(List<Input.Image> input) {
-    return solveGreedyByImage(new HashSet<>(input));
+  private static Solution solve(List<Slide> input) {
+    return solveGreedy(input);
   }
+
+//  private static Solution solve(List<Input.Image> input) {
+//    return solveGreedyByImage(new HashSet<>(input));
+//  }
 
   private static int getScore(Slide last, Slide now) {
     int same = Sets.intersection(last.getTags(), now.getTags()).size();
@@ -170,12 +183,14 @@ public class HashCode2019 {
   private static int getScoreCached(Slide last, Slide now) {
     String key = makeCacheKey(last, now);
 
-    if (scoreCache.containsKey(key)) {
-      return scoreCache.get(key);
+    Integer score = null;
+    try {
+      score = scoreCache.get(key);
+    } catch (Exception e) {
+      score = getScore(last, now);
+      scoreCache.put(key, score);
     }
 
-    int score = getScore(last, now);
-    scoreCache.put(key, score);
     return score;
   }
 
@@ -186,6 +201,9 @@ public class HashCode2019 {
     toReturn.slides.add(last);
 
     while (!input.isEmpty()) {
+      // see progress
+      System.err.println("remaining: " + input.size());
+
       Slide nextBest = null;
       int bestScore = 0;
 
@@ -193,7 +211,7 @@ public class HashCode2019 {
         if (slide.getTagSize() / 2 < bestScore) {
           break;
         }
-        int s = getScore(last, slide);
+        int s = getScoreCached(last, slide);
         // last slide = smallest tag set that yields that score
         if (s >= bestScore) {
           bestScore = s;

@@ -12,6 +12,8 @@ public class HashCode2019 {
   public static final int RUN_SIZE = 2000;
   public static final int LOOKBACK_DEPTH = 200;
 
+  public static Map<String, Integer> scoreCache = new HashMap<>();
+
   public static List<Slide> createSlides(Input input) {
     List<Slide> toReturn = new ArrayList<>(input.images.size());
     List<Input.Image> verticalImages = new ArrayList<>();
@@ -64,7 +66,7 @@ public class HashCode2019 {
     }
 
     public String toString() {
-      return Joiner.on(" ").join(images.stream().map(Input.Image::getId).collect(Collectors.toList()));
+      return Joiner.on(" ").join(images.stream().map(Input.Image::getId).sorted().collect(Collectors.toList()));
     }
 
     public Set<String> getTags() {
@@ -136,9 +138,12 @@ public class HashCode2019 {
       }
       input.images.add(new Input.Image(i, "V".equals(orientation), tags));
     }
-    List<Slide> slides = createSlides(input);
-    Collections.sort(slides, Comparator.comparing(Slide::getTagSize).reversed());
-    Solution s = solve(slides);
+
+//    this part needed if assuming pre-created slides
+//    List<Slide> slides = createSlides(input);
+//    Collections.sort(slides, Comparator.comparing(Slide::getTagSize).reversed());
+
+    Solution s = solve(input.images);
     int score = evaluate(s);
     System.err.println("Score: " + score);
     System.out.println(s);
@@ -155,13 +160,25 @@ public class HashCode2019 {
     return score;
   }
 
+  private static Solution solve(List<Input.Image> input) {
+    return solveGreedyByImage(new HashSet<>(input));
+  }
+
   private static int getScore(Slide last, Slide now) {
     int same = Sets.intersection(last.getTags(), now.getTags()).size();
     return Math.min(Math.min(last.getTags().size() - same, now.getTags().size() - same), same);
   }
 
-  private static Solution solve(List<Slide> input) {
-    return solveGreedy(input);
+  private static int getScoreCached(Slide last, Slide now) {
+    String key = makeCacheKey(last, now);
+
+    if (scoreCache.containsKey(key)) {
+      return scoreCache.get(key);
+    }
+
+    int score = getScore(last, now);
+    scoreCache.put(key, score);
+    return score;
   }
 
   private static Solution solveGreedy(List<Slide> input) {
@@ -194,16 +211,90 @@ public class HashCode2019 {
     return toReturn;
   }
 
+  private static String makeCacheKey(Slide s1, Slide s2) {
+    List<Slide> slides = new ArrayList<>();
+    slides.add(s1);
+    slides.add(s2);
+
+    return Joiner.on("-").join(slides.stream().map(Slide::toString).sorted().collect(Collectors.toList()));
+  }
+
+  private static Solution solveGreedyByImage(Set<Input.Image> images) {
+    Solution toReturn = new Solution();
+
+    Slide current;
+    Input.Image firstImage = images.stream().filter(i -> !i.multi).findFirst().get();
+    if (firstImage != null) {
+      current = new Slide(firstImage);
+    } else {
+      List<Input.Image> imageList = images.stream().limit(2).collect(Collectors.toList());
+      current = new Slide(imageList.get(0), imageList.get(1));
+    }
+    toReturn.slides.add(current);
+    images.removeAll(current.images);
+
+    Set<Input.Image> hImages = images.stream().filter(i -> !i.multi).collect(Collectors.toSet());
+    Set<Input.Image> vImages = images.stream().filter(i -> i.multi).collect(Collectors.toSet());
+
+    while (!hImages.isEmpty() || !vImages.isEmpty()) {
+      // see progress
+      System.err.println("remaining: h " + hImages.size() + ", v " + vImages.size());
+
+      int hScore = -1;
+      Slide hSlide = null;
+
+      // best neighbor from horizontal slides
+      for (Input.Image image : hImages) {
+        Slide slide = new Slide(image);
+        int score = getScoreCached(current, slide);
+        if (score > hScore) {
+          hScore = score;
+          hSlide = slide;
+        }
+      }
+
+      int vScore = -1;
+      Slide vSlide = null;
+
+      // best neighbor from vertical slides
+      for (Input.Image v1 : vImages) {
+        for (Input.Image v2 : vImages) {
+          if (v1.id != v2.id) {
+            Slide slide = new Slide(v1, v2);
+            int score = getScoreCached(current, slide);
+            if (score > vScore) {
+              vScore = score;
+              vSlide = slide;
+            }
+          }
+        }
+      }
+
+      // pick better of candidates
+      if (hScore > vScore) {
+        current = hSlide;
+        toReturn.slides.add(current);
+        hImages.removeAll(hSlide.images);
+      } else if (vScore >= 0) {
+        current = vSlide;
+        toReturn.slides.add(current);
+        vImages.removeAll(vSlide.images);
+      }
+    }
+
+    return toReturn;
+  }
+
   private static Solution solveChristofides(List<Slide> input) {
     Solution toReturn = new Solution();
 
     int co = 0;
     int loop = 0;
     for (List<Slide> slides : Lists.partition(input, RUN_SIZE)) {
-      System.err.println(co++ + "/" + input.size()/RUN_SIZE);
+      System.err.println(co++ + "/" + input.size() / RUN_SIZE);
       int[] output = new Christofides().solve(computeInterestsDouble(slides));
       for (int i : output) {
-        toReturn.slides.add(input.get((loop*RUN_SIZE)+i));
+        toReturn.slides.add(input.get((loop * RUN_SIZE) + i));
       }
       loop++;
     }

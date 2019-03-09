@@ -223,9 +223,9 @@ public class HashCode2019 {
     Solution toReturn = new Solution();
 
     Slide current;
-    Input.Image firstImage = images.stream().filter(i -> !i.multi).findFirst().get();
-    if (firstImage != null) {
-      current = new Slide(firstImage);
+    Optional<Input.Image> firstImage = images.stream().filter(i -> !i.multi).findFirst();
+    if (firstImage.isPresent()) {
+      current = new Slide(firstImage.get());
     } else {
       List<Input.Image> imageList = images.stream().limit(2).collect(Collectors.toList());
       current = new Slide(imageList.get(0), imageList.get(1));

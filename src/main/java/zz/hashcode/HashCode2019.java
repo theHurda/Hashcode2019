@@ -58,10 +58,12 @@ public class HashCode2019 {
 
   static class Slide {
     List<Input.Image> images = new ArrayList<>();
+    Set<String> tags = new HashSet<>();
 
     public Slide(Input.Image... image) {
       for (Input.Image i : image) {
         images.add(i);
+        tags.addAll(i.tags);
       }
     }
 
@@ -70,15 +72,11 @@ public class HashCode2019 {
     }
 
     public Set<String> getTags() {
-      Set<String> allTags = new HashSet<>();
-      for (Input.Image image : images) {
-        allTags.addAll(image.tags);
-      }
-      return allTags;
+      return tags;
     }
 
     int getTagSize() {
-      return getTags().size();
+      return tags.size();
     }
   }
 
@@ -247,6 +245,7 @@ public class HashCode2019 {
       for (Input.Image image : hImages) {
         Slide slide = new Slide(image);
         int score = getScoreCached(current, slide);
+
         if (score > hScore) {
           hScore = score;
           hSlide = slide;
@@ -262,6 +261,7 @@ public class HashCode2019 {
           if (v1.id != v2.id) {
             Slide slide = new Slide(v1, v2);
             int score = getScoreCached(current, slide);
+
             if (score > vScore) {
               vScore = score;
               vSlide = slide;

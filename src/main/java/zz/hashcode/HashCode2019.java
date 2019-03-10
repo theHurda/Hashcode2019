@@ -14,8 +14,13 @@ import java.util.stream.Collectors;
 public class HashCode2019 {
   public static final int RUN_SIZE = 2000;
   public static final int LOOKBACK_DEPTH = 200;
+  public static final int POPULARITY_MIN = 2;
 
-  public static LoadingCache<String, Integer> scoreCache = CacheBuilder.newBuilder().maximumSize(1000000).build(new CacheLoader<String, Integer>() {
+  public static Map<String, Integer> tagPopularity = new HashMap<>();
+
+  public static LoadingCache<String, Integer> scoreCache = CacheBuilder.newBuilder()
+      .maximumSize(100000)
+      .build(new CacheLoader<String, Integer>() {
     @Override
     public Integer load(String key) throws Exception {
       return null;
@@ -71,7 +76,7 @@ public class HashCode2019 {
     public Slide(Input.Image... image) {
       for (Input.Image i : image) {
         images.add(i);
-        tags.addAll(i.tags);
+        tags.addAll(i.tags.stream().filter(t -> tagPopularity.get(t) >= POPULARITY_MIN).collect(Collectors.toSet()));
       }
     }
 
@@ -141,8 +146,20 @@ public class HashCode2019 {
       for (int j = 0; j < tagCount; j++) {
         String tag = scanner.next();
         tags.add(tag);
+
+        if (tagPopularity.containsKey(tag)) {
+          tagPopularity.put(tag, tagPopularity.get(tag) + 1);
+        } else {
+          tagPopularity.put(tag, 1);
+        }
       }
+
       input.images.add(new Input.Image(i, "V".equals(orientation), tags));
+    }
+
+    List<Integer> sortedP = tagPopularity.values().stream().sorted().collect(Collectors.toList());
+    for (Integer p : sortedP) {
+      System.err.print(p + " ");
     }
 
     List<Slide> slides = createSlides(input);
